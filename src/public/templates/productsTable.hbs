@@ -2,6 +2,7 @@
     {{#each products}}
         <div class="card w-25 text-center m-1 shadow">
             <h3>{{this.title}}</h3>
+            <p>description: {{this.desc}}</p>
             <p>price: ${{this.price}}</p>
             <img src={{this.thumbnail}} alt="">
         </div>

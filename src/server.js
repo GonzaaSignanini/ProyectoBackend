@@ -7,28 +7,25 @@ const authRoute = require("./routes/auth");
 const productRoute = require("./routes/product");
 const cartRoute = require("./routes/cart");
 const orderRoute = require("./routes/order");
-const indexRoute = require("./routes/index");
 const path = require("path");
-const { engine } = require("express-handlebars");
+const exphbs = require("express-handlebars");
+const indexRoute = require("./routes/indexRoute");
+const { Server } = require("socket.io");
+const Product = require("./models/Product");
+const Chat = require("./models/Chat");
+
 dotenv.config();
 
 
 // APP SET
-app.engine('handlebars', engine());
-app.set('view engine', 'handlebars');
-app.set('views', __dirname+'/views');
-
-// TWILIO 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = require('twilio')(accountSid, authToken);
-// client.messages.create({
-//     to: process.env.MY_PHONE_NUMBER,
-//     from: '+18484005693',
-//     body: 'Thanks for your purchase. Order in process!'
-// })
-// .then(message => console.log(message.sid))
-// .done();
+app.set('views', path.join(__dirname, 'views'));
+app.engine('.hbs', exphbs.engine({
+    defaultLayout: 'main',
+    layoutsDir: path.join(app.get('views'), 'layouts'),
+    partialsDir: path.join(app.get('views'), 'partials'),
+    extname: '.hbs'
+}));
+app.set('view engine', '.hbs');
 
 mongoose
     .connect(
@@ -38,6 +35,7 @@ mongoose
     .catch((err) => {
         console.log(err);
     });
+
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -51,6 +49,29 @@ app.use('/images', express.static(path.join(__dirname, '/public')));
 app.use('/avatar/', express.static(path.join(__dirname, '/public')));
 
 
-app.listen(process.env.PORT || 8080, () => {
+
+
+const server = app.listen(process.env.PORT || 8080, () => {
     console.log("Server listen on Port: 8080");
 })
+
+const io = new Server(server)
+io.on('connection', async socket => {
+    // PRODUCTS
+
+    console.log(`The socket ${socket.id} is connected`)
+    let allProducts = await Product.find()
+    socket.emit('deliverProducts', allProducts)
+    
+    // CHATS
+
+    let allChats = await Chat.find();
+    console.log(allChats);
+    socket.emit('messagelog', allChats);
+    socket.on('message', async data => {
+        await Chat.insertMany({data});
+        io.emit('messagelog', await Chat.find());
+    });
+});
+
+module.exports = io;
