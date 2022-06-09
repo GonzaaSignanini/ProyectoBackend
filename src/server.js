@@ -13,6 +13,7 @@ const indexRoute = require("./routes/indexRoute");
 const { Server } = require("socket.io");
 const Product = require("./models/Product");
 const Chat = require("./models/Chat");
+const cookieParser = require("cookie-parser");
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ mongoose
     });
 
 
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use("/api/auth", authRoute);
@@ -66,7 +68,6 @@ io.on('connection', async socket => {
     // CHATS
 
     let allChats = await Chat.find();
-    console.log(allChats);
     socket.emit('messagelog', allChats);
     socket.on('message', async data => {
         await Chat.insertMany({data});

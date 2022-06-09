@@ -27,9 +27,17 @@ router.post("/register", uploader.single('avatar'),async (req, res)=> {
 });
 
 router.get('/current', async (req,res)=>{
-    const user = await User.findOne();
-    res.status(200).json({user})
-})
+    const accessToken = req.cookies.accessToken;
+    const user = jwt.verify(accessToken, process.env.JWT_SEC);
+    req.user = user;
+    console.log({user});
+    res.status(200).json({user});
+});
+
+router.get('/logout',(req, res)=>{
+    res.clearCookie('accessToken');
+    res.redirect('/');
+});
 
 
 //LOGIN
@@ -48,15 +56,22 @@ router.post("/login", async (req, res)=> {
         OriginalPassword !== req.body.password &&
             res.status(401).json("Wrong credentials!");
 
+            
             const accessToken = jwt.sign(
                 {
+                    username: user.username,
+                    avatar: user.avatar,
+                    email: user.email,
                     id: user._id,
                     isAdmin: user.isAdmin,
                 }, 
                 process.env.JWT_SEC,
-                {expiresIn: "3d"}
+                {expiresIn: '1h'},  
             );
-
+        res.cookie("accessToken", accessToken,{
+            httpOnly:true,
+        });
+        
         const { password, ...others } = user._doc;
         res.status(200).json({others, accessToken});
    } catch(err) {
